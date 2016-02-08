@@ -96,7 +96,7 @@ def runUploadingAndSaving( configs ):
     stop = False
     runUploading( configs, screenShotPath )
     
-    start_uploading = time.time()
+    start_saving_cycle = time.time()
     
     while ( stop == False ):
         start_saving = time.time()  
@@ -108,9 +108,9 @@ def runUploadingAndSaving( configs ):
         if( timeOut > 0.1 ):
             time.sleep( timeOut )
                 
-        finish_uploading = time.time();
+        finish_saving_cycle = time.time();
             
-        timeOut =  int( configs['SCREENSHOT_UPLOADING_TIMEOUT'] ) - (finish_uploading - start_uploading)
+        timeOut =  int( configs['SCREENSHOT_UPLOADING_TIMEOUT'] ) - (finish_saving_cycle - start_saving_cycle)
         
         if( timeOut < 0.1 ):
             stop = True
