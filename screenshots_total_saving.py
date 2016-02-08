@@ -5,7 +5,7 @@ import subprocess
 import time
 import datetime
 
-from shutil import move
+from shutil import copyfile
 
 import config
 
@@ -21,7 +21,7 @@ def makeScreenShot( screenShotPath ):
     executeCommand( command )
 
 
-def uploadScreenshot( screenShotPath, configs ):
+def uploadScreenshot( configs, screenShotPath ):
     command = ' /usr/bin/curl -i \
  -F cmd=terminals.upload_screenshot \
  -F id_terminal=' + configs['ID_TERMINAL'] + ' \
@@ -37,13 +37,9 @@ def reportScreenshotNotChanged( configs ):
  
     executeCommand( command )
    
-   
-sizeOld = 0  
-fileForUploading = "";
 
 def moveToSave( configs, screenShotPath ):
     fileSavingDir = configs['SCREENSHOTS_SAVING_DIR'] + datetime.datetime.today().strftime('%y-%m-%d_%H') 
-    print ( fileSavingDir )
     
     if ( os.path.exists( fileSavingDir ) ):
         pass
@@ -54,31 +50,52 @@ def moveToSave( configs, screenShotPath ):
     fileExtension = os.path.splitext(fileName)[1];
 
     newFileName = str( int(round(time.time() * 1000)) ) + fileExtension
-    move( screenShotPath, fileSavingDir + "/" + newFileName)
-    
-    global fileForUploading
-    fileForUploading =  fileSavingDir + "/" + newFileName
-  
+    copyfile( screenShotPath, fileSavingDir + "/" + newFileName)
 
 def runSaving( configs, screenShotPath ):
 
-    global sizeOld;    
+    sizeOld = 0
+    
+    if ( os.path.isfile( screenShotPath ) ):
+        sizeOld = os.path.getsize( screenShotPath )
+        os.remove( screenShotPath )
     
     makeScreenShot( screenShotPath )
     
-    sizeNew = os.path.getsize( screenShotPath ) 
-        
-    if ( sizeNew != sizeOld ):        
-        sizeOld = sizeNew
+    sizeNew = os.path.getsize( screenShotPath )     
+            
+    if ( sizeNew != sizeOld ):
+        print( "SAVING: success" )
         moveToSave( configs, screenShotPath )
     else:
+        print( "SAVING: pass" )
+        pass
+    
+def runUploading( configs, screenShotPath ):
+    
+    sizeOld = 0
+    
+    if ( os.path.isfile( screenShotPath ) ):
+        sizeOld = os.path.getsize( screenShotPath )
         os.remove( screenShotPath )
-                 
+    
+    makeScreenShot( screenShotPath )
+    
+    sizeNew = os.path.getsize( screenShotPath )     
+            
+    if ( sizeNew != sizeOld ):
+        print ( "UPLOADING: success" )
+        uploadScreenshot( configs, screenShotPath )
+    else:
+        print( "UPLOADING: not changed" )
+        reportScreenshotNotChanged( configs )
 
 def runUploadingAndSaving( configs ):
     screenShotPath = configs['SCREENSHOT_PATH'];
         
     stop = False
+    runUploading( configs, screenShotPath )
+    
     start_uploading = time.time()
     
     while ( stop == False ):
@@ -98,9 +115,6 @@ def runUploadingAndSaving( configs ):
         if( timeOut < 0.1 ):
             stop = True
         
-    global fileForUploading
-    uploadScreenshot( fileForUploading, configs ) 
-                
                 
 ###############################################################################    
          
