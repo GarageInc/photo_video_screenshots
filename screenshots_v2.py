@@ -16,7 +16,7 @@ def executeCommand( command ):
     subprocess.call( command, shell=True, stderr=subprocess.STDOUT)
     
     
-def makeScreenShot( screenShotPath ):
+def makeScreenshot( screenShotPath ):
     command = 'DISPLAY=:0 /usr/bin/scrot -q 80 '+screenShotPath+' && /usr/bin/convert -crop 1920x1080+0+0 ' + screenShotPath + ' ' + screenShotPath
 
     executeCommand( command )
@@ -37,58 +37,19 @@ def reportNotChanged( configs ):
  -F id_terminal=' + configs['ID_TERMINAL'] + ' ' + configs['GATEWAY_API_URL']
  
     executeCommand( command )
-   
-
-def move( configs, screenshotPath, savingDir ):
-    fileSavingDir = savingDir  + datetime.datetime.today().strftime('%y-%m-%d_%H') 
+       
+def getNewFilePath( configs, newDir ):
+    fileSavingDir = newDir  + datetime.datetime.today().strftime('%y-%m-%d_%H') 
     
     if ( os.path.exists( fileSavingDir ) ):
         pass
     else:
         os.mkdir ( fileSavingDir )       
     
-    fileExtension = os.path.splitext( os.path.basename( screenshotPath ) )[1];
+    newFileName = str( int(math.ceil(time.time() * 1000)) ) + ".jpg"
+    newFilePath = fileSavingDir + "/" + newFileName
 
-    newFileName = str( int(math.ceil(time.time() * 1000)) ) + fileExtension
-    copyfile( screenshotPath, fileSavingDir + "/" + newFileName)
-
-def saving( configs, screenshotPath, savingDir ):
-
-    sizeOld = 0
-    
-    if ( os.path.isfile( screenshotPath ) ):
-        sizeOld = os.path.getsize( screenshotPath )
-        os.remove( screenshotPath )
-    
-    makeScreenShot( screenshotPath )
-    
-    sizeNew = os.path.getsize( screenshotPath )     
-            
-    if ( sizeNew != sizeOld ):
-        print( "SAVING: success" )
-        move( configs, screenshotPath, savingDir )
-    else:
-        print( "SAVING: pass" )
-        pass
-    
-def uploading( configs, screenshotPath ):
-    
-    sizeOld = 0
-    
-    if ( os.path.isfile( screenshotPath ) ):
-        sizeOld = os.path.getsize( screenshotPath )
-        os.remove( screenshotPath )
-    
-    makeScreenShot( screenshotPath )
-    
-    sizeNew = os.path.getsize( screenshotPath )     
-            
-    if ( sizeNew != sizeOld ):
-        print ( "UPLOADING: success" )
-        uploadScreenshot( configs, screenshotPath )
-    else:
-        print( "UPLOADING: not changed" )
-        reportNotChanged( configs )
+    return newFilePath
 
 def run( configs ):
     
@@ -98,29 +59,46 @@ def run( configs ):
     savingTimeout = int( configs['SCREENSHOT_SAVING_TIMEOUT'] )    
     uploadingTimeout = int( configs['SCREENSHOT_UPLOADING_TIMEOUT'] )
     
-    lastUploading = 0
+    requestAt = 0
+    screenshotCopyPath = "";
+    sizeOld = 0
     
     while True:   
-        # uploading            
-        currentTime = time.time();
-                
-        timeRemaining = uploadingTimeout - (currentTime - lastUploading)
-            
-        if( timeRemaining < 0 ):
-            uploading( configs, screenshotPath )
-            lastUploading = time.time()
-            
-        # saving 
-        startSaving = time.time()  
+        startAt = time.time()  
+    
+        if ( os.path.isfile( screenshotPath ) ):
+            sizeOld = os.path.getsize( screenshotPath )
+            os.remove( screenshotPath )
         
-        saving( configs, screenshotPath, savingDir )
-
-        finishSaving = time.time()
-                
-        timeRemaining = savingTimeout - (finishSaving - startSaving)
+        makeScreenshot( screenshotPath )        
+        
+        isChanged = ( sizeOld != os.path.getsize( screenshotPath ) )
+        
+        # saving
+        if ( isChanged ):
+            screenshotCopyPath = getNewFilePath( configs, savingDir )
+            copyfile( screenshotPath, screenshotCopyPath )
+            print( "SAVED: " + screenshotCopyPath )
+        else:
+            print( "SAVING: pass" )
+            pass
             
-        if( timeRemaining > 0.1 ):
-            time.sleep( timeRemaining )
+        # uploading
+        if( ( time.time() - requestAt )  >= uploadingTimeout ):
+            if ( isChanged ):
+                print ( "UPLOADING: " + screenshotCopyPath )
+                uploadScreenshot( configs, screenshotCopyPath )
+            else:
+                print( "UPLOADING: not changed" )
+                reportNotChanged( configs )
+            requestAt = time.time()
+        else:
+            pass
+            
+        remainingTime = savingTimeout - ( time.time() - startAt )
+            
+        if( remainingTime > 0.1 ):
+            time.sleep( remainingTime )
                     
         
                 
