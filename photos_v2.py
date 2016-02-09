@@ -14,24 +14,26 @@ def executeCommand( command ):
     #print( command )
     subprocess.call( command, shell=True, stderr=subprocess.STDOUT)
     
-def makeScreenshot( screenshotPath ):
-    command = "DISPLAY=:0 /usr/bin/scrot -q 80 {0} && /usr/bin/convert -crop 1920x1080+0+0 {1} {2}".format(
-        screenshotPath, 
-        screenshotPath, 
-        screenshotPath )
+def makePhoto( photoPath ):    
+    global PHOTO_INPUT_DEVICE
+    
+    command = "/usr/bin/streamer -c {0} -s 1920x1080 -f jpeg -o {1}".format(
+        PHOTO_INPUT_DEVICE,
+        photoPath);
+    
     executeCommand( command )
 
-def uploadScreenshot( screenshotPath ):
+def uploadPhoto( photoPath ):
     global GATEWAY_UPLOAD_URL
     global ID_TERMINAL
     
     command = " /usr/bin/curl -i \
- -F cmd=terminals.upload_screenshot \
+ -F cmd=terminals.upload_photo \
  -F id_terminal={0} \
  -F name=file \
  -F file=@{1} {2}".format( 
      ID_TERMINAL, 
-     screenshotPath, 
+     photoPath, 
      GATEWAY_UPLOAD_URL )
     
     executeCommand( command )
@@ -41,7 +43,7 @@ def reportNotChanged():
     global ID_TERMINAL
     
     command = " /usr/bin/curl -i \
- -F cmd=terminals.screenshot_not_changed \
+ -F cmd=terminals.photo_not_changed \
  -F id_terminal={0} {1}".format( 
      ID_TERMINAL, 
      GATEWAY_API_URL )
@@ -59,13 +61,13 @@ def getNewFilePath( newDir ):
     return "%s/%d.jpg"  %( fileSavingDir, math.ceil(time.time() * 1000))
 
 def run():
-    global SCREENSHOT_PATH
-    global SCREENSHOTS_SAVING_DIR
-    global SCREENSHOT_SAVING_TIMEOUT
-    global SCREENSHOT_UPLOADING_TIMEOUT
+    global PHOTO_PATH
+    global PHOTOS_SAVING_DIR
+    global PHOTO_SAVING_TIMEOUT
+    global PHOTO_UPLOADING_TIMEOUT
     
     requestAt = 0
-    screenshotCopyPath = "";
+    photoCopyPath = "";
     sizeOld = 0
     
     isUploadChanged = False
@@ -73,29 +75,29 @@ def run():
     while True:   
         startAt = time.time()  
     
-        if ( os.path.isfile( SCREENSHOT_PATH ) ):
-            sizeOld = os.path.getsize( SCREENSHOT_PATH )
-            os.remove( SCREENSHOT_PATH )
+        if ( os.path.isfile( PHOTO_PATH ) ):
+            sizeOld = os.path.getsize( PHOTO_PATH )
+            os.remove( PHOTO_PATH )
         
-        makeScreenshot( SCREENSHOT_PATH )        
+        makePhoto( PHOTO_PATH )        
         
-        isChanged = ( sizeOld != os.path.getsize( SCREENSHOT_PATH ) )
+        isChanged = ( sizeOld != os.path.getsize( PHOTO_PATH ) )
         isUploadChanged = isUploadChanged or isChanged
         
         # saving
         if ( isChanged ):
-            screenshotCopyPath = getNewFilePath( SCREENSHOTS_SAVING_DIR )
-            copyfile( SCREENSHOT_PATH, screenshotCopyPath )
-            print( "SAVED: " + screenshotCopyPath )
+            photoCopyPath = getNewFilePath( PHOTOS_SAVING_DIR )
+            copyfile( PHOTO_PATH, photoCopyPath )
+            print( "SAVED: " + photoCopyPath )
         else:
             print( "SAVING: pass" )
             pass
             
         # uploading
-        if( ( time.time() - requestAt )  >= SCREENSHOT_UPLOADING_TIMEOUT ):
+        if( ( time.time() - requestAt )  >= PHOTO_UPLOADING_TIMEOUT ):
             if ( isUploadChanged ):
-                print ( "UPLOADING: " + screenshotCopyPath )
-                uploadScreenshot( screenshotCopyPath )
+                print ( "UPLOADING: " + photoCopyPath )
+                uploadPhoto( photoCopyPath )
                 isUploadChanged = False
             else:
                 print( "UPLOADING: not changed" )
@@ -104,7 +106,7 @@ def run():
         else:
             pass
             
-        remainingTime = SCREENSHOT_SAVING_TIMEOUT - ( time.time() - startAt )
+        remainingTime = PHOTO_SAVING_TIMEOUT - ( time.time() - startAt )
             
         if( remainingTime > 0.01 ):
             time.sleep( remainingTime )
@@ -118,17 +120,19 @@ initFilePath = '/etc/terminal/osago.ini'
 configs = config.readConfigFile( initFilePath )
 
 GATEWAY_UPLOAD_URL = configs['GATEWAY_UPLOAD_URL']
-ID_TERMINAL = configs['ID_TERMINAL'] 
 GATEWAY_API_URL = configs['GATEWAY_API_URL']
+ID_TERMINAL = configs['ID_TERMINAL'] 
     
-SCREENSHOT_PATH = configs['SCREENSHOT_PATH'];
-SCREENSHOTS_SAVING_DIR = configs['SCREENSHOTS_SAVING_DIR']    
+PHOTO_PATH = configs['PHOTO_PATH'];
+PHOTOS_SAVING_DIR = configs['PHOTOS_SAVING_DIR']    
         
-SCREENSHOT_SAVING_TIMEOUT = int( configs['SCREENSHOT_SAVING_TIMEOUT'] )    
-SCREENSHOT_UPLOADING_TIMEOUT = int( configs['SCREENSHOT_UPLOADING_TIMEOUT'] )
-IS_SCREENSHOT_ENABLED = configs['IS_SCREENSHOT_ENABLED'].lower() == 'true'
+PHOTO_SAVING_TIMEOUT = int( configs['PHOTO_SAVING_TIMEOUT'] )    
+PHOTO_UPLOADING_TIMEOUT = int( configs['PHOTO_UPLOADING_TIMEOUT'] )
+IS_PHOTO_ENABLED = configs['IS_PHOTO_ENABLED'].lower() == 'true'
 
-if ( IS_SCREENSHOT_ENABLED ):
+PHOTO_INPUT_DEVICE = configs['PHOTO_INPUT_DEVICE']
+
+if ( IS_PHOTO_ENABLED ):
     run()
     
     
