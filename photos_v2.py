@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 
-import os.path
 import subprocess
-import time
-import datetime
 import math
 
-from shutil import copyfile
+from shutil import move
+from datetime import datetime
+from time import time, sleep
+from os import path, mkdir
 
 import config
 
@@ -37,28 +37,16 @@ def uploadPhoto( photoPath ):
      GATEWAY_UPLOAD_URL )
     
     executeCommand( command )
-
-def reportNotChanged():
-    global GATEWAY_API_URL
-    global ID_TERMINAL
-    
-    command = " /usr/bin/curl -i \
- -F cmd=terminals.photo_not_changed \
- -F id_terminal={0} {1}".format( 
-     ID_TERMINAL, 
-     GATEWAY_API_URL )
- 
-    executeCommand( command )
        
 def getNewFilePath( newDir ):
-    fileSavingDir = newDir  + datetime.datetime.today().strftime('%y-%m-%d_%H') 
+    fileSavingDir = newDir  + datetime.today().strftime('%y-%m-%d_%H') 
     
-    if ( os.path.exists( fileSavingDir ) ):
+    if ( path.exists( fileSavingDir ) ):
         pass
     else:
-        os.mkdir ( fileSavingDir )       
+        mkdir ( fileSavingDir )       
     
-    return "%s/%d.jpg"  %( fileSavingDir, math.ceil(time.time() * 1000))
+    return "%s/%d.jpeg"  %( fileSavingDir, math.ceil(time() * 1000))
 
 def run():
     global PHOTO_PATH
@@ -68,48 +56,29 @@ def run():
     
     requestAt = 0
     photoCopyPath = "";
-    sizeOld = 0
-    
-    isUploadChanged = False
-    
+        
     while True:   
         startAt = time.time()  
-    
-        if ( os.path.isfile( PHOTO_PATH ) ):
-            sizeOld = os.path.getsize( PHOTO_PATH )
-            os.remove( PHOTO_PATH )
-        
-        makePhoto( PHOTO_PATH )        
-        
-        isChanged = ( sizeOld != os.path.getsize( PHOTO_PATH ) )
-        isUploadChanged = isUploadChanged or isChanged
+            
+        makePhoto( PHOTO_PATH )   
         
         # saving
-        if ( isChanged ):
-            photoCopyPath = getNewFilePath( PHOTOS_SAVING_DIR )
-            copyfile( PHOTO_PATH, photoCopyPath )
-            print( "SAVED: " + photoCopyPath )
-        else:
-            print( "SAVING: pass" )
-            pass
+        photoCopyPath = getNewFilePath( PHOTOS_SAVING_DIR )
+        move( PHOTO_PATH, photoCopyPath )
+        print ( "SAVED: " + photoCopyPath )
             
         # uploading
-        if( ( time.time() - requestAt )  >= PHOTO_UPLOADING_TIMEOUT ):
-            if ( isUploadChanged ):
-                print ( "UPLOADING: " + photoCopyPath )
-                uploadPhoto( photoCopyPath )
-                isUploadChanged = False
-            else:
-                print( "UPLOADING: not changed" )
-                reportNotChanged()
-            requestAt = time.time()
+        if ( ( time() - requestAt )  >= PHOTO_UPLOADING_TIMEOUT ):
+            print ( "UPLOADING: " + photoCopyPath )
+            uploadPhoto( photoCopyPath )
+            requestAt = time()
         else:
             pass
             
-        remainingTime = PHOTO_SAVING_TIMEOUT - ( time.time() - startAt )
+        remainingTime = PHOTO_SAVING_TIMEOUT - ( time() - startAt )
             
         if( remainingTime > 0.01 ):
-            time.sleep( remainingTime )
+            sleep( remainingTime )
                     
         
                 
