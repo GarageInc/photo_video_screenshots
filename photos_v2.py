@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import subprocess
 import math
 
 from shutil import move

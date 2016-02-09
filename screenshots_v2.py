@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 
-import os.path
-import subprocess
-import time
-import datetime
 import math
 
 from shutil import copyfile
+from datetime import datetime
+from time import time, sleep
+from os import path, mkdir, remove
 
 import config
 
@@ -49,14 +48,14 @@ def reportNotChanged():
     executeCommand( command )
        
 def getNewFilePath( newDir ):
-    fileSavingDir = newDir  + datetime.datetime.today().strftime('%y-%m-%d_%H') 
+    fileSavingDir = newDir  + datetime.today().strftime('%y-%m-%d_%H') 
     
-    if ( os.path.exists( fileSavingDir ) ):
+    if ( path.exists( fileSavingDir ) ):
         pass
     else:
-        os.mkdir ( fileSavingDir )       
+        mkdir ( fileSavingDir )       
     
-    return "%s/%d.jpg"  %( fileSavingDir, math.ceil(time.time() * 1000))
+    return "%s/%d.jpg"  %( fileSavingDir, math.ceil(time() * 1000))
 
 def run():
     global SCREENSHOT_PATH
@@ -71,15 +70,15 @@ def run():
     isUploadChanged = False
     
     while True:   
-        startAt = time.time()  
+        startAt = time()  
     
-        if ( os.path.isfile( SCREENSHOT_PATH ) ):
-            sizeOld = os.path.getsize( SCREENSHOT_PATH )
-            os.remove( SCREENSHOT_PATH )
+        if ( path.isfile( SCREENSHOT_PATH ) ):
+            sizeOld = path.getsize( SCREENSHOT_PATH )
+            remove( SCREENSHOT_PATH )
         
         makeScreenshot( SCREENSHOT_PATH )        
         
-        isChanged = ( sizeOld != os.path.getsize( SCREENSHOT_PATH ) )
+        isChanged = ( sizeOld != path.getsize( SCREENSHOT_PATH ) )
         isUploadChanged = isUploadChanged or isChanged
         
         # saving
@@ -92,7 +91,7 @@ def run():
             pass
             
         # uploading
-        if( ( time.time() - requestAt )  >= SCREENSHOT_UPLOADING_TIMEOUT ):
+        if( ( time() - requestAt )  >= SCREENSHOT_UPLOADING_TIMEOUT ):
             if ( isUploadChanged ):
                 print ( "UPLOADING: " + screenshotCopyPath )
                 uploadScreenshot( screenshotCopyPath )
@@ -100,14 +99,14 @@ def run():
             else:
                 print( "UPLOADING: not changed" )
                 reportNotChanged()
-            requestAt = time.time()
+            requestAt = time()
         else:
             pass
             
-        remainingTime = SCREENSHOT_SAVING_TIMEOUT - ( time.time() - startAt )
+        remainingTime = SCREENSHOT_SAVING_TIMEOUT - ( time() - startAt )
             
         if( remainingTime > 0.01 ):
-            time.sleep( remainingTime )
+            sleep( remainingTime )
                     
         
                 
