@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import math
+import subprocess
 
 from shutil import move
 from datetime import datetime
@@ -57,7 +58,7 @@ def run():
     photoCopyPath = "";
         
     while True:   
-        startAt = time.time()  
+        startAt = time()  
             
         makePhoto( PHOTO_PATH )   
         
